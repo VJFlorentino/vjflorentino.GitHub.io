@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SVC">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0e12">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22SVC%20Monte%20Carlo%22%2C%22short_name%22%3A%22SVC%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230a0e12%22%2C%22theme_color%22%3A%22%230a0e12%22%2C%22orientation%22%3A%22portrait%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%253D%2522http%253A%252F%252Fwww.w3.org%252F2000%252Fsvg%2522%2520viewBox%253D%25220%25200%2520192%2520192%2522%253E%253Crect%2520width%253D%2522192%2522%2520height%253D%2522192%2522%2520fill%253D%2522%25230a0e12%2522%252F%253E%253Ctext%2520x%253D%252296%2522%2520y%253D%2522118%2522%2520font-family%253D%2522monospace%2522%2520font-size%253D%252272%2522%2520font-weight%253D%2522700%2522%2520fill%253D%2522%25234cc3a5%2522%2520text-anchor%253D%2522middle%2522%253ESVC%253C%252Ftext%253E%253C%252Fsvg%253E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+<title>SVC · Monte Carlo</title>
+<style>
+  :root{
+    --bg:#0a0e12;
+    --panel:#11171e;
+    --panel2:#0d131a;
+    --line:#1e2933;
+    --line2:#2a3744;
+    --ink:#e6edf3;
+    --mut:#7d8d9c;
+    --mut2:#536170;
+    --acc:#4cc3a5;       /* signal teal */
+    --acc-dim:#1f4a40;
+    --warn:#e0a04c;
+    --bad:#e0604c;
+    --good:#4cc3a5;
+    --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+    --sans:'Inter',-apple-system,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:14px;line-height:1.45;letter-spacing:-0.01em;
+    padding:0 0 80px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+  /* ── header ── */
+  header{
+    border-bottom:1px solid var(--line);
+    padding:22px 0 18px;margin-bottom:24px;
+    position:sticky;top:0;background:rgba(10,14,18,.92);
+    backdrop-filter:blur(8px);z-index:20;
+  }
+  .hrow{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .brand{display:flex;align-items:baseline;gap:14px}
+  .brand h1{
+    font-family:var(--mono);font-size:15px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;
+  }
+  .brand h1 b{color:var(--acc);font-weight:600}
+  .tag{font-family:var(--mono);font-size:10.5px;color:var(--mut2);
+    letter-spacing:.1em;text-transform:uppercase}
+  .runbtn{
+    font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;background:var(--acc);color:#04130f;border:none;
+    padding:10px 22px;border-radius:4px;cursor:pointer;transition:.15s;
+  }
+  .runbtn:hover{background:#5fd6b7;box-shadow:0 0 0 3px var(--acc-dim)}
+  .runbtn:active{transform:translateY(1px)}
+  .runbtn:disabled{opacity:.5;cursor:wait}
+
+  /* ── layout ── */
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .phead{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--mut);padding:12px 16px;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;background:var(--panel2);
+  }
+  .phead .n{color:var(--mut2)}
+  .pbody{padding:16px}
+
+  /* ── inputs ── */
+  .field{margin-bottom:13px}
+  .field:last-child{margin-bottom:0}
+  label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--mut);margin-bottom:5px}
+  label .u{color:var(--mut2);text-transform:none;letter-spacing:0}
+  input,select{
+    width:100%;background:var(--panel2);border:1px solid var(--line2);color:var(--ink);
+    font-family:var(--mono);font-size:13px;padding:8px 10px;border-radius:4px;
+    transition:.12s;
+  }
+  input:focus,select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 2px var(--acc-dim)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .subhead{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--mut2);margin:18px 0 10px;padding-top:14px;border-top:1px dashed var(--line2)}
+  .subhead:first-child{margin-top:0;padding-top:0;border-top:none}
+
+  details.adv{margin-top:4px}
+  details.adv summary{
+    font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--acc);cursor:pointer;padding:8px 0;list-style:none;user-select:none;
+  }
+  details.adv summary::-webkit-details-marker{display:none}
+  details.adv summary::before{content:'+ ';color:var(--mut2)}
+  details.adv[open] summary::before{content:'– '}
+
+  .legtoggle{display:flex;gap:6px;margin-bottom:14px}
+  .legtoggle button{
+    flex:1;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;
+    background:var(--panel2);border:1px solid var(--line2);color:var(--mut);
+    padding:8px 4px;border-radius:4px;cursor:pointer;transition:.12s;text-transform:uppercase;
+  }
+  .legtoggle button.on{background:var(--acc-dim);border-color:var(--acc);color:var(--acc)}
+
+  .leg{border:1px solid var(--line2);border-radius:5px;padding:11px;margin-bottom:9px;position:relative;background:var(--panel2)}
+  .leg .lh{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+  .leg .lh span{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+  .leg .del{background:none;border:none;color:var(--mut2);cursor:pointer;font-size:15px;line-height:1;padding:0 2px}
+  .leg .del:hover{color:var(--bad)}
+  .addleg{width:100%;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    background:none;border:1px dashed var(--line2);color:var(--mut);padding:9px;border-radius:5px;cursor:pointer;transition:.12s}
+  .addleg:hover{border-color:var(--acc);color:var(--acc)}
+
+  /* ── results ── */
+  .placeholder{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:440px;color:var(--mut2);text-align:center;gap:14px;padding:40px;
+  }
+  .placeholder .big{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
+  .placeholder p{max-width:380px;font-size:12.5px;line-height:1.6}
+
+  .verdict{padding:16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .vbadge{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    padding:7px 16px;border-radius:4px}
+  .vbadge.pass{background:var(--acc-dim);color:var(--acc);border:1px solid var(--acc)}
+  .vbadge.warn{background:#3a2c12;color:var(--warn);border:1px solid var(--warn)}
+  .vbadge.fail{background:#3a1814;color:var(--bad);border:1px solid var(--bad)}
+  .vsummary{font-size:12.5px;color:var(--mut);flex:1;min-width:200px}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{padding:15px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .kpi:nth-child(4n){border-right:none}
+  .kpi .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut2);margin-bottom:6px}
+  .kpi .v{font-family:var(--mono);font-size:22px;font-weight:500;letter-spacing:-.02em}
+  .kpi .v small{font-size:12px;color:var(--mut);font-weight:400}
+  .kpi .sub{font-family:var(--mono);font-size:10px;color:var(--mut2);margin-top:3px}
+  .pos{color:var(--good)}.neg{color:var(--bad)}.neu{color:var(--ink)}
+
+  .chartwrap{padding:18px 16px 8px}
+  .chartwrap .ct{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:4px}
+  .chartwrap .cs{font-family:var(--mono);font-size:10px;color:var(--mut2);margin-bottom:12px}
+  canvas{width:100%;display:block}
+
+  .tablewrap{padding:4px 16px 18px}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  th,td{text-align:right;padding:7px 10px;border-bottom:1px solid var(--line)}
+  th{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut2);font-weight:500}
+  td:first-child,th:first-child{text-align:left;color:var(--mut)}
+  td{color:var(--ink)}
+  tr:last-child td{border-bottom:none}
+
+  .checks{padding:6px 16px 18px}
+  .chk{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .chk:last-child{border-bottom:none}
+  .chk .ico{font-family:var(--mono);font-size:11px;font-weight:700;width:18px;flex-shrink:0;text-align:center;margin-top:1px}
+  .chk .ico.ok{color:var(--good)}.chk .ico.no{color:var(--bad)}.chk .ico.mb{color:var(--warn)}
+  .chk .lbl{flex:1}
+  .chk .lbl b{font-family:var(--mono);font-size:11px;color:var(--mut);font-weight:500;letter-spacing:.04em;text-transform:uppercase;display:block;margin-bottom:1px}
+  .chk .val{font-family:var(--mono);font-size:11px;color:var(--mut2);flex-shrink:0}
+
+  footer{margin-top:30px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:11px;color:var(--mut2);line-height:1.6}
+  footer b{color:var(--mut);font-weight:500}
+  .seedrow{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .seedrow input{width:auto;flex:0 0 110px}
+  .runmeta{font-family:var(--mono);font-size:10px;color:var(--mut2);letter-spacing:.04em}
+
+  /* ───────────────── MOBILE ───────────────── */
+  @media(max-width:760px){
+    body{font-size:14px;padding-bottom:88px}              /* room for docked run bar */
+    .wrap{padding:0 14px}
+    /* safe-area for notch / home indicator */
+    header{padding:14px 0 12px;
+      padding-top:calc(14px + env(safe-area-inset-top));
+      position:sticky;top:0}
+    .hrow{gap:8px}
+    .brand{gap:9px;flex-wrap:wrap}
+    .brand h1{font-size:13px;letter-spacing:.1em}
+    .tag{font-size:9px;flex-basis:100%}
+    /* run button leaves the header and docks to the bottom, thumb-reachable */
+    header .runbtn{display:none}
+    .dockbar{
+      position:fixed;left:0;right:0;bottom:0;z-index:30;
+      padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+      background:rgba(10,14,18,.94);backdrop-filter:blur(10px);
+      border-top:1px solid var(--line);display:block;
+    }
+    .dockbar .runbtn{width:100%;padding:15px;font-size:13px;border-radius:8px}
+
+    .grid{gap:16px}
+    .pbody{padding:14px}
+    /* bigger tap targets; 16px font stops iOS auto-zoom on focus */
+    input,select{font-size:16px;padding:11px 12px;min-height:46px}
+    .legtoggle{flex-wrap:wrap}
+    .legtoggle button{min-height:40px;font-size:11px;flex:1 1 30%}
+    .addleg{padding:13px;min-height:46px}
+    .leg .del{font-size:22px;padding:4px 8px;margin:-4px -4px 0 0}
+
+    /* results: stack KPIs 2-up, keep them legible */
+    .kpis{grid-template-columns:repeat(2,1fr) !important}
+    .kpi{padding:13px 13px}
+    .kpi .v{font-size:20px}
+    .kpi:nth-child(2n){border-right:none}
+    .kpi:nth-child(4n){border-right:1px solid var(--line)}  /* reset desktop rule */
+
+    /* tables scroll horizontally instead of crushing */
+    .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    table{min-width:440px}
+
+    .verdict{padding:13px}
+    .chartwrap{padding:14px 12px 6px}
+    footer{font-size:11px}
+  }
+  @media(min-width:761px){ .dockbar{display:none} }
+
+  /* respect reduced motion */
+  @media(prefers-reduced-motion:reduce){
+    *{transition:none !important}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap hrow">
+    <div class="brand">
+      <h1>SVC · <b>Monte Carlo</b></h1>
+      <span class="tag">Heston + Jumps · IV-path · v1</span>
+    </div>
+    <button class="runbtn" id="run">Run simulation</button>
+  </div>
+</header>
+
+<div class="wrap grid">
+
+  <!-- ───────── INPUT COLUMN ───────── -->
+  <div>
+    <div class="panel">
+      <div class="phead"><span>Trade input</span><span class="n">manual</span></div>
+      <div class="pbody">
+
+        <div class="subhead">Underlying</div>
+        <div class="row2">
+          <div class="field"><label>Spot <span class="u">$</span></label><input id="spot" value="100" inputmode="decimal"></div>
+          <div class="field"><label>IV Index <span class="u">%</span></label><input id="iv" value="32" inputmode="decimal"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>IVR</label><input id="ivr" value="45" inputmode="decimal"></div>
+          <div class="field"><label>IVP</label><input id="ivp" value="55" inputmode="decimal"></div>
+        </div>
+
+        <div class="subhead">Structure</div>
+        <div class="row2">
+          <div class="field"><label>DTE <span class="u">days</span></label><input id="dte" value="45" inputmode="numeric"></div>
+          <div class="field"><label>Credit <span class="u">$/contract</span></label><input id="credit" value="0.80" inputmode="decimal"></div>
+        </div>
+        <div class="field"><label>Contracts</label><input id="qty" value="1" inputmode="numeric"></div>
+
+        <div class="subhead">Position Greeks <span style="color:var(--mut2);text-transform:none;letter-spacing:0">· from tasty</span></div>
+        <div class="row2">
+          <div class="field" style="margin:0"><label>Theta <span class="u">$/day</span></label><input id="pTheta" value="6.5" inputmode="decimal"></div>
+          <div class="field" style="margin:0"><label>Vega <span class="u">$</span></label><input id="pVega" value="-22" inputmode="decimal"></div>
+        </div>
+
+        <div class="legtoggle">
+          <button data-preset="ps" class="on">Put spread</button>
+          <button data-preset="ic">Iron condor</button>
+          <button data-preset="custom">Custom</button>
+        </div>
+        <div id="legs"></div>
+        <button class="addleg" id="addleg">+ Add leg</button>
+
+        <details class="adv">
+          <summary>Model parameters</summary>
+          <div class="subhead" style="margin-top:14px">Heston (realized vol)</div>
+          <div class="row2">
+            <div class="field"><label>Long-run vol <span class="u">%</span></label><input id="theta" value="20" inputmode="decimal"></div>
+            <div class="field"><label>Mean-rev κ</label><input id="kappa" value="3.0" inputmode="decimal"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Vol-of-vol ξ</label><input id="xi" value="0.6" inputmode="decimal"></div>
+            <div class="field"><label>Spot/vol ρ</label><input id="rho" value="-0.7" inputmode="decimal"></div>
+          </div>
+          <div class="subhead">Merton jumps</div>
+          <div class="row3">
+            <div class="field"><label>λ /yr</label><input id="jlam" value="1.0" inputmode="decimal"></div>
+            <div class="field"><label>μ jump</label><input id="jmu" value="-0.03" inputmode="decimal"></div>
+            <div class="field"><label>σ jump</label><input id="jsig" value="0.07" inputmode="decimal"></div>
+          </div>
+          <div class="subhead">Engine</div>
+          <div class="row2">
+            <div class="field"><label>Paths</label><input id="npaths" value="20000" inputmode="numeric"></div>
+            <div class="field"><label>Rate r <span class="u">%</span></label><input id="rate" value="4.5" inputmode="decimal"></div>
+          </div>
+          <div class="seedrow">
+            <label style="margin:0">Seed</label>
+            <input id="seed" value="42" inputmode="numeric">
+          </div>
+        </details>
+
+      </div>
+    </div>
+    <footer>
+      <b>What this is.</b> A path-level Monte Carlo for SVC. Spot evolves under Heston stochastic
+      vol with Merton jumps; options are priced and Greeks computed via Black-Scholes off your
+      entry IV, held constant across the path. Outputs are framed against your $10k reference
+      account and management points: 50% credit target, 21 DTE, expiry.
+      <br><br>
+      <b>What this isn't.</b> An oracle. Constant IV means the sim leans on theta and spot behavior
+      and will understate the edge of selling elevated IV (no crush modeled). Results describe the
+      <i>shape</i> of outcomes under your assumptions, not a forecast. Not investment advice.
+    </footer>
+  </div>
+
+  <!-- ───────── RESULTS COLUMN ───────── -->
+  <div class="panel">
+    <div class="phead"><span>Per-trade analysis</span><span class="n" id="runmeta">idle</span></div>
+    <div id="results">
+      <div class="placeholder">
+        <div class="big">No simulation yet</div>
+        <p>Enter a trade on the left and run. You'll get the P/L distribution at each management
+        point, POP / P50, EV in percent-of-equity, CVaR for your UR sizing check, and the
+        path-dependent stats SVC actually cares about — short-strike tests, –100% stop probability,
+        and max adverse excursion.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="dockbar">
+  <button class="runbtn" id="runDock">Run simulation</button>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   SVC MONTE CARLO ENGINE
+   Heston (realized vol) + Merton jumps for the spot path,
+   independent mean-reverting IV path for option marks,
+   daily re-pricing of each leg via Black-Scholes.
+   ════════════════════════════════════════════════════════════ */
+
+// ---- seeded RNG (mulberry32) + Box-Muller ----
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let _rng=mulberry32(42), _spare=null;
+function rngSeed(s){_rng=mulberry32(s>>>0);_spare=null}
+function gauss(){if(_spare!==null){const v=_spare;_spare=null;return v}let u,v,s;do{u=2*_rng()-1;v=2*_rng()-1;s=u*u+v*v}while(s>=1||s===0);const m=Math.sqrt(-2*Math.log(s)/s);_spare=v*m;return u*m}
+function poisson(lam){if(lam<=0)return 0;const L=Math.exp(-lam);let k=0,p=1;do{k++;p*=_rng()}while(p>L);return k-1}
+
+// ---- Black-Scholes ----
+function normcdf(x){const t=1/(1+0.2316419*Math.abs(x));const d=0.3989422804014327*Math.exp(-x*x/2);let p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-p:p}
+function bsPrice(S,K,T,r,sig,call){
+  if(T<=1e-9){return call?Math.max(S-K,0):Math.max(K-S,0)}
+  if(sig<=1e-6)sig=1e-6;
+  const sq=sig*Math.sqrt(T);
+  const d1=(Math.log(S/K)+(r+sig*sig/2)*T)/sq;
+  const d2=d1-sq;
+  return call ? S*normcdf(d1)-K*Math.exp(-r*T)*normcdf(d2)
+              : K*Math.exp(-r*T)*normcdf(-d2)-S*normcdf(-d1);
+}
+function bsDelta(S,K,T,r,sig,call){
+  if(T<=1e-9)return call?(S>K?1:0):(S>K?0:-1);
+  if(sig<=1e-6)sig=1e-6;
+  const d1=(Math.log(S/K)+(r+sig*sig/2)*T)/(sig*Math.sqrt(T));
+  return call?normcdf(d1):normcdf(d1)-1;
+}
+function normpdf(x){return 0.3989422804014327*Math.exp(-x*x/2)}
+// Per-share Greeks. Theta returned PER DAY; vega per 1 vol point (0.01).
+function bsGreeks(S,K,T,r,sig,call){
+  if(T<=1e-9||sig<=1e-6){return {delta:bsDelta(S,K,T,r,Math.max(sig,1e-6),call),gamma:0,theta:0,vega:0}}
+  const sq=sig*Math.sqrt(T);
+  const d1=(Math.log(S/K)+(r+sig*sig/2)*T)/sq;
+  const d2=d1-sq;
+  const pdf=normpdf(d1);
+  const delta=call?normcdf(d1):normcdf(d1)-1;
+  const gamma=pdf/(S*sq);
+  const vega=S*pdf*Math.sqrt(T)*0.01;            // per 1 vol point
+  const thetaYr=call
+    ? -S*pdf*sig/(2*Math.sqrt(T)) - r*K*Math.exp(-r*T)*normcdf(d2)
+    : -S*pdf*sig/(2*Math.sqrt(T)) + r*K*Math.exp(-r*T)*normcdf(-d2);
+  return {delta,gamma,theta:thetaYr/365,vega};   // theta per calendar day
+}
+// ---- invert |delta| -> implied vol for a leg (bisection on BS delta) ----
+// targetAbsDelta is the option's own |delta| per share (e.g. 0.16 for a 16-delta).
+function ivFromDelta(S,K,T,r,call,targetAbsDelta){
+  targetAbsDelta=Math.min(0.995,Math.max(0.005,targetAbsDelta));
+  let lo=0.01, hi=4.0;
+  for(let it=0;it<60;it++){
+    const mid=(lo+hi)/2;
+    const ad=Math.abs(bsDelta(S,K,T,r,mid,call));
+    if(ad>targetAbsDelta){hi=mid;}else{lo=mid;}   // delta increases with vol for OTM
+  }
+  return (lo+hi)/2;
+}
+// per-leg vol: use leg.ivEff if set (skew-aware), else fall back to flat ivFrac
+function legVol(lg,ivFrac){return (lg.ivEff!=null)?lg.ivEff:ivFrac;}
+
+function structureGreeks(S, legs, T, r, ivFrac, qty){
+  let d=0,g=0,th=0,v=0;
+  for(const lg of legs){
+    const gk=bsGreeks(S,lg.strike,T,r,legVol(lg,ivFrac),lg.type==='C');
+    const w=-lg.sign;          // we are short a sold(+1) leg => -1 * legGreek
+    d+=w*gk.delta; g+=w*gk.gamma; th+=w*gk.theta; v+=w*gk.vega;
+  }
+  const m=100*qty;             // option multiplier * contracts
+  return {delta:d*m, gamma:g*m, theta:th*m, vega:v*m};
+}
+
+function structureLiability(S, legs, T, r, ivFrac){
+  let v=0;
+  for(const lg of legs){
+    const p=bsPrice(S,lg.strike,T,r,legVol(lg,ivFrac),lg.type==='C');
+    v += lg.sign*p;           // sign:+1 short, -1 long
+  }
+  return v;                   // positive = we owe (bad), at entry == credit
+}
+function structureDelta(S, legs, T, r, ivFrac){
+  let d=0;
+  for(const lg of legs){
+    d += lg.sign*bsDelta(S,lg.strike,T,r,ivFrac,lg.type==='C');
+  }
+  // our P/L delta is -liability delta (short premium => positive underlying delta when puts)
+  return -d;
+}
+
+function pct(a,p){const i=(a.length-1)*p;const lo=Math.floor(i),hi=Math.ceil(i);if(lo===hi)return a[lo];return a[lo]+(a[hi]-a[lo])*(i-lo)}
+
+function runSim(cfg){
+  rngSeed(cfg.seed);
+  const dt=1/252;
+  const steps=Math.max(1,Math.round(cfg.dte/365*252));
+  const T0=cfg.dte/365;
+  const r=cfg.rate;
+  const v0=Math.pow(cfg.iv,2), vth=Math.pow(cfg.theta,2); // variance
+  const kap=cfg.kappa, xi=cfg.xi, rho=cfg.rho;
+  const jlam=cfg.jlam, jmu=cfg.jmu, jsig=cfg.jsig;
+  // options priced off entry IV Index for spot dynamics; IVR/IVP kept as context.
+  const ivConst=cfg.iv;
+  // ── per-leg effective vol from entered delta (skew-aware, sticky-strike) ──
+  // tasty delta entered as e.g. -16 (short put) → |0.16| per share. Solve vol that
+  // reproduces it at the leg strike, then hold that vol fixed on the leg all path.
+  const legs=cfg.legs.map(lg=>{
+    const adt=Math.abs(lg.delta)/100;                // per-share |delta|
+    const call=lg.type==='C';
+    const ivEff=(adt>0.001&&adt<0.999)? ivFromDelta(cfg.spot,lg.strike,T0,r,call,adt) : ivConst;
+    return {...lg, ivEff};
+  });
+  const mult=100*cfg.qty;                 // option multiplier * contracts
+  const creditTotal=cfg.credit*mult;      // $ collected
+  const target=0.5*creditTotal;           // 50% profit
+  const stop=-1.0*creditTotal;            // -100% credit
+  const dte21Step=Math.max(0,steps-Math.round(21/365*252));
+
+  // short strike (nearest sold strike to spot) for "test" tracking
+  let shortStrikes=cfg.legs.filter(l=>l.sign>0).map(l=>l.strike);
+
+  const N=cfg.npaths;
+  const plExpiry=new Float64Array(N);
+  const plTarget=new Float64Array(N);   // P/L at first target/stop/expiry exit (managed)
+  const pl21=new Float64Array(N);
+  let nProfit=0,nHit50=0,nStop=0,nTest=0,nDeltaBreach=0;
+  const maeArr=new Float64Array(N);
+  const DELTA_THRESH=25;
+  // delta envelope: collect delta at each step across live paths
+  const dStepSum=new Float64Array(steps+1), dStepSumSq=new Float64Array(steps+1), dStepCnt=new Int32Array(steps+1);
+  const dStepMin=new Float64Array(steps+1).fill(1e9), dStepMax=new Float64Array(steps+1).fill(-1e9);
+
+  for(let i=0;i<N;i++){
+    let S=cfg.spot;
+    let varc=v0;                 // realized variance (Heston) — drives spot only
+    let exited=false, exitPL=0, hit50=false, stopped=false, tested=false;
+    let mae=0, dBreached=false;
+    let pl21val=null;
+
+    for(let s=1;s<=steps;s++){
+      // correlated normals
+      const z1=gauss(), zr=gauss();
+      const z2=rho*z1+Math.sqrt(1-rho*rho)*zr;
+      // Heston variance (full truncation)
+      const vpos=Math.max(varc,0);
+      varc = varc + kap*(vth-vpos)*dt + xi*Math.sqrt(vpos*dt)*z2;
+      if(varc<0)varc=0;
+      const volStep=Math.sqrt(Math.max(vpos,1e-8));
+      // spot diffusion
+      let dlnS=(r-0.5*vpos)*dt + volStep*Math.sqrt(dt)*z1;
+      // jumps
+      const nj=poisson(jlam*dt);
+      if(nj>0){for(let j=0;j<nj;j++){dlnS+=jmu+jsig*gauss();}}
+      S=S*Math.exp(dlnS);
+
+      // short strike test
+      if(!tested){for(const k of shortStrikes){
+        // test = breach of a sold strike (put: S<=K ; call: S>=K). Approx via proximity to any short strike.
+        if(Math.abs(S-k)/k<0.002 || cfg.legs.some(l=>l.sign>0&&((l.type==='P'&&S<=l.strike)||(l.type==='C'&&S>=l.strike)))){tested=true;break}
+      }}
+
+      const Tnow=Math.max(T0-s*dt,0);
+      const liabTotal=structureLiability(S,legs,Tnow,r,ivConst)*mult;
+      const curPL=creditTotal-liabTotal;
+
+      // position delta from Black-Scholes (constant IV)
+      if(!exited){
+        const liveDelta=structureGreeks(S,legs,Tnow,r,ivConst,cfg.qty).delta;
+        if(!dBreached && Math.abs(liveDelta)>=DELTA_THRESH){dBreached=true;}
+        // envelope stats (live paths only)
+        dStepSum[s]+=liveDelta; dStepSumSq[s]+=liveDelta*liveDelta; dStepCnt[s]++;
+        if(liveDelta<dStepMin[s])dStepMin[s]=liveDelta;
+        if(liveDelta>dStepMax[s])dStepMax[s]=liveDelta;
+      }
+
+      if(curPL<mae)mae=curPL;
+
+      if(s===dte21Step && pl21val===null)pl21val=curPL;
+
+      if(!exited){
+        if(curPL>=target){exitPL=curPL;hit50=true;exited=true;}
+        else if(curPL<=stop){exitPL=curPL;stopped=true;exited=true;}
+        else if(s>=dte21Step){exitPL=curPL;exited=true;} // SVC: 21 DTE mandatory action
+      }
+    }
+    // expiry value (intrinsic) for the unmanaged distribution
+    const liabExp=structureLiability(S,legs,0,r,0.01)*mult;
+    const plExp=creditTotal-liabExp;
+    plExpiry[i]=plExp;
+    if(!exited){exitPL=plExp;}
+    plTarget[i]=exitPL;
+    pl21[i]=(pl21val===null?exitPL:pl21val);
+    maeArr[i]=mae;
+    if(exitPL>0)nProfit++;
+    if(hit50)nHit50++;
+    if(stopped)nStop++;
+    if(tested)nTest++;
+    if(dBreached)nDeltaBreach++;
+  }
+
+  // build delta envelope series (mean ± 1σ, min/max) over time, in days-from-entry
+  const env=[];
+  for(let s=1;s<=steps;s++){
+    if(dStepCnt[s]<5)continue;
+    const m=dStepSum[s]/dStepCnt[s];
+    const sd=Math.sqrt(Math.max(0,dStepSumSq[s]/dStepCnt[s]-m*m));
+    env.push({day:s/252*365, mean:m, sd, min:dStepMin[s], max:dStepMax[s], frac:dStepCnt[s]/N});
+  }
+
+  const sortedM=Float64Array.from(plTarget).sort();
+  const sortedE=Float64Array.from(plExpiry).sort();
+  const mean=a=>{let s=0;for(const x of a)s+=x;return s/a.length};
+  const evM=mean(plTarget), evE=mean(plExpiry);
+  // CVaR 5% (managed) — average of worst 5%
+  let cv=0,k=Math.max(1,Math.round(N*0.05));for(let i=0;i<k;i++)cv+=sortedM[i];cv/=k;
+  const maeSorted=Float64Array.from(maeArr).sort();
+  let cvMAE=0;for(let i=0;i<k;i++)cvMAE+=maeSorted[i];cvMAE/=k;
+
+  // entry delta = sum of entered leg deltas (skew-aware, from tasty), in our P/L convention
+  // short put has -delta; our position is short it => +delta. leg.delta already signed as tasty shows
+  // the OPTION's delta; our position delta on that leg = -sign * legDelta... but tasty leg delta is
+  // the option delta, and being short flips it. Net position delta:
+  let netDelta=0;
+  for(const lg of legs){ netDelta += (-lg.sign) * lg.delta; }  // *contracts handled below
+  netDelta *= cfg.qty;
+
+  // theta & vega come straight from typed position Greeks (tasty = truth)
+  const posTheta=cfg.pTheta, posVega=cfg.pVega;
+
+  // ── ratios ──
+  const thetaVega = Math.abs(posVega)>1e-9 ? posTheta/Math.abs(posVega) : null;   // ≥0.20 floor
+  const maxLossTot = cfg.maxLoss!=null ? cfg.maxLoss*100*cfg.qty : null;          // DR only
+  const thetaRisk = maxLossTot ? posTheta/maxLossTot : null;                       // theta : max-loss
+
+  return {
+    N,steps,creditTotal,target,stop,mult,
+    pop:nProfit/N, p50:nHit50/N, pStop:nStop/N, pTest:nTest/N,
+    pDeltaBreach:nDeltaBreach/N,
+    entryDelta:netDelta, entryTheta:posTheta, entryVega:posVega,
+    thetaVega, thetaRisk, maxLossTot,
+    env, dteAxis:cfg.dte,
+    evM, evE, cvar:cv, cvarMAE:cvMAE,
+    maxLossDR: cfg.maxLoss!==null? cfg.maxLoss*mult/100*100 : null,
+    sortedM, sortedE, pl21,
+    pctM:{p5:pct(sortedM,.05),p25:pct(sortedM,.25),p50:pct(sortedM,.5),p75:pct(sortedM,.75),p95:pct(sortedM,.95)},
+    pctE:{p5:pct(sortedE,.05),p50:pct(sortedE,.5),p95:pct(sortedE,.95)},
+  };
+}
+
+/* ════════════════════════════════════════════════════════════
+   UI
+   ════════════════════════════════════════════════════════════ */
+const $=id=>document.getElementById(id);
+const legsEl=$('legs');
+let legState=[];
+
+const presets={
+  ps:[ {type:'P',sign:1,strike:92,delta:-16},{type:'P',sign:-1,strike:87,delta:-8} ],
+  ic:[ {type:'P',sign:1,strike:92,delta:-16},{type:'P',sign:-1,strike:87,delta:-8},
+       {type:'C',sign:1,strike:108,delta:16},{type:'C',sign:-1,strike:113,delta:8} ],
+  custom:[ {type:'P',sign:1,strike:92,delta:-16},{type:'P',sign:-1,strike:87,delta:-8} ],
+};
+function setPreset(p){
+  legState=presets[p].map(l=>({...l}));
+  document.querySelectorAll('.legtoggle button').forEach(b=>b.classList.toggle('on',b.dataset.preset===p));
+  renderLegs();
+}
+function renderLegs(){
+  legsEl.innerHTML='';
+  legState.forEach((lg,i)=>{
+    const d=document.createElement('div');d.className='leg';
+    d.innerHTML=`
+      <div class="lh"><span>Leg ${i+1}</span><button class="del" data-i="${i}">×</button></div>
+      <div class="row2" style="margin-bottom:8px">
+        <div class="field" style="margin:0"><label>Type</label>
+          <select data-i="${i}" data-f="type">
+            <option value="P"${lg.type==='P'?' selected':''}>Put</option>
+            <option value="C"${lg.type==='C'?' selected':''}>Call</option>
+          </select></div>
+        <div class="field" style="margin:0"><label>Side</label>
+          <select data-i="${i}" data-f="sign">
+            <option value="1"${lg.sign>0?' selected':''}>Short</option>
+            <option value="-1"${lg.sign<0?' selected':''}>Long</option>
+          </select></div>
+      </div>
+      <div class="row2">
+        <div class="field" style="margin:0"><label>Strike</label>
+          <input data-i="${i}" data-f="strike" value="${lg.strike}" inputmode="decimal"></div>
+        <div class="field" style="margin:0"><label>Delta <span class="u">tasty</span></label>
+          <input data-i="${i}" data-f="delta" value="${lg.delta}" inputmode="decimal"></div>
+      </div>`;
+    legsEl.appendChild(d);
+  });
+  legsEl.querySelectorAll('select,input').forEach(el=>{
+    el.addEventListener('change',e=>{
+      const i=+e.target.dataset.i,f=e.target.dataset.f;
+      legState[i][f]= (f==='strike'||f==='delta')?parseFloat(e.target.value): f==='sign'?parseInt(e.target.value): e.target.value;
+    });
+  });
+  legsEl.querySelectorAll('.del').forEach(b=>b.addEventListener('click',e=>{
+    legState.splice(+e.target.dataset.i,1);renderLegs();
+  }));
+}
+document.querySelectorAll('.legtoggle button').forEach(b=>b.addEventListener('click',()=>setPreset(b.dataset.preset)));
+$('addleg').addEventListener('click',()=>{legState.push({type:'P',sign:1,strike:90,delta:-16});renderLegs();});
+setPreset('ps');
+
+// ---- max loss for DR structures (for ROC / sizing check) ----
+function computeMaxLoss(legs,credit){
+  // defined-risk vertical/condor: width of widest spread - credit
+  const shorts=legs.filter(l=>l.sign>0), longs=legs.filter(l=>l.sign<0);
+  if(longs.length===0)return null; // undefined risk
+  // pair by type
+  let maxW=0;
+  ['P','C'].forEach(t=>{
+    const s=shorts.filter(l=>l.type===t).map(l=>l.strike);
+    const l=longs.filter(l=>l.type===t).map(l=>l.strike);
+    if(s.length&&l.length){maxW=Math.max(maxW,Math.abs(s[0]-l[0]));}
+  });
+  return maxW-credit; // per-contract $ (×100 later)
+}
+
+function fmt$(x){const s=x<0?'-':'';x=Math.abs(x);return s+'$'+x.toLocaleString(undefined,{maximumFractionDigits:0})}
+function fmtPct(x){return (x*100).toFixed(1)+'%'}
+function cls(x){return x>0?'pos':x<0?'neg':'neu'}
+
+function triggerRun(){
+  const btns=[$('run'),$('runDock')].filter(Boolean);
+  btns.forEach(b=>{b.disabled=true;b.textContent='Running…';});
+  setTimeout(()=>{
+    try{ execute(); if(window.matchMedia('(max-width:760px)').matches){document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});} }
+    catch(e){ console.error(e); $('results').innerHTML='<div class="placeholder"><div class="big" style="color:var(--bad)">Run failed</div><p>'+e.message+'</p></div>'; }
+    btns.forEach(b=>{b.disabled=false;b.textContent='Run simulation';});
+  },30);
+}
+$('run').addEventListener('click',triggerRun);
+$('runDock').addEventListener('click',triggerRun);
+
+function execute(){
+  const credit=parseFloat($('credit').value);
+  const legs=legState.map(l=>({...l,strike:parseFloat(l.strike)}));
+  const maxLoss=computeMaxLoss(legs,credit);
+  const cfg={
+    spot:parseFloat($('spot').value), iv:parseFloat($('iv').value)/100,
+    ivr:parseFloat($('ivr').value), ivp:parseFloat($('ivp').value),
+    dte:parseInt($('dte').value), credit, qty:parseInt($('qty').value),
+    legs, maxLoss,
+    theta:parseFloat($('theta').value)/100, kappa:parseFloat($('kappa').value),
+    xi:parseFloat($('xi').value), rho:parseFloat($('rho').value),
+    jlam:parseFloat($('jlam').value), jmu:parseFloat($('jmu').value), jsig:parseFloat($('jsig').value),
+    pTheta:parseFloat($('pTheta').value), pVega:parseFloat($('pVega').value),
+    npaths:Math.min(60000,Math.max(1000,parseInt($('npaths').value))),
+    rate:parseFloat($('rate').value)/100, seed:parseInt($('seed').value)||42,
+  };
+  const t0=performance.now();
+  const R=runSim(cfg);
+  const ms=Math.round(performance.now()-t0);
+  $('runmeta').textContent=`${R.N.toLocaleString()} paths · ${R.steps} steps · ${ms}ms`;
+  render(R,cfg,maxLoss,credit);
+}
+
+function render(R,cfg,maxLoss,credit){
+  const ACCT=10000;
+  const evPctM=R.evM/ACCT, cvarPct=Math.abs(R.cvar)/ACCT, maePct=Math.abs(R.cvarMAE)/ACCT;
+  const isDR=maxLoss!==null;
+  const maxLossTotal=isDR? maxLoss*100*cfg.qty : null;
+
+  const fmtG=(x,d=0)=>(x>0?'+':'')+x.toFixed(d);
+
+  // ── KPI block ──
+  const html=`
+    <div class="kpis">
+      <div class="kpi"><div class="k">POP</div><div class="v ${cls(R.pop-0.5)}">${fmtPct(R.pop)}</div><div class="sub">managed exit &gt; 0</div></div>
+      <div class="kpi"><div class="k">P50 target</div><div class="v neu">${fmtPct(R.p50)}</div><div class="sub">hit 50% credit</div></div>
+      <div class="kpi"><div class="k">EV</div><div class="v ${cls(R.evM)}">${fmt$(R.evM)}</div><div class="sub ${cls(evPctM)}">${(evPctM*100).toFixed(2)}% equity</div></div>
+      <div class="kpi"><div class="k">CVaR 5%</div><div class="v neg">${fmt$(R.cvar)}</div><div class="sub">${fmtPct(cvarPct)} equity</div></div>
+      <div class="kpi"><div class="k">P(−100% stop)</div><div class="v ${R.pStop>0.1?'neg':'neu'}">${fmtPct(R.pStop)}</div><div class="sub">credit-stop hit</div></div>
+      <div class="kpi"><div class="k">Short-strike test</div><div class="v ${R.pTest>0.4?'neg':'neu'}">${fmtPct(R.pTest)}</div><div class="sub">breach ≥ once</div></div>
+      <div class="kpi"><div class="k">Credit</div><div class="v neu">${fmt$(R.creditTotal)}</div><div class="sub">target ${fmt$(R.target)}</div></div>
+      <div class="kpi"><div class="k">${isDR?'Max loss':'Tail (CVaR MAE)'}</div><div class="v neg">${fmt$(isDR?-maxLossTotal:R.cvarMAE)}</div><div class="sub">${isDR?'defined':'5% worst path'}</div></div>
+    </div>
+
+    <div class="phead" style="border-top:1px solid var(--line)"><span>Greeks</span><span class="n">Δ skew-aware · Θ/V from tasty</span></div>
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi"><div class="k">Entry Δ</div><div class="v ${cls(R.entryDelta)}">${fmtG(R.entryDelta,1)}</div><div class="sub">sum of leg deltas</div></div>
+      <div class="kpi"><div class="k">Entry Θ</div><div class="v ${cls(R.entryTheta)}">${fmtG(R.entryTheta,1)}</div><div class="sub">$/day · from tasty</div></div>
+      <div class="kpi"><div class="k">Entry V</div><div class="v ${cls(R.entryVega)}">${fmtG(R.entryVega,0)}</div><div class="sub">$/vol pt · from tasty</div></div>
+      <div class="kpi"><div class="k">P(|Δ| ≥ 25)</div><div class="v ${R.pDeltaBreach>0.3?'neg':'neu'}">${fmtPct(R.pDeltaBreach)}</div><div class="sub">delta-trigger path</div></div>
+    </div>
+
+    <div class="phead" style="border-top:1px solid var(--line)"><span>Efficiency ratios</span><span class="n">DR basis</span></div>
+    <div class="kpis" style="grid-template-columns:repeat(2,1fr)">
+      <div class="kpi"><div class="k">Theta / Vega</div>
+        <div class="v ${R.thetaVega==null?'neu':(R.thetaVega>=0.20?'pos':'neg')}">${R.thetaVega==null?'—':R.thetaVega.toFixed(3)}</div>
+        <div class="sub">${R.thetaVega==null?'vega ≈ 0':(R.thetaVega>=0.20?'meets ≥ 0.20 floor':'below 0.20 floor')}</div></div>
+      <div class="kpi"><div class="k">Theta : Max-loss</div>
+        <div class="v neu">${R.thetaRisk==null?'—':(R.thetaRisk*100).toFixed(3)+'%'}</div>
+        <div class="sub">${R.thetaRisk==null?'undefined risk':'$/day per $ risk · '+(R.maxLossTot?fmt$(-R.maxLossTot)+' max loss':'')}</div></div>
+    </div>
+
+    <div class="chartwrap">
+      <div class="ct">P/L distribution — managed exit</div>
+      <div class="cs">credit target · −100% stop · 21 DTE action, whichever first · ${R.N.toLocaleString()} paths</div>
+      <canvas id="hist" height="220"></canvas>
+    </div>
+
+    <div class="chartwrap" style="border-top:1px solid var(--line)">
+      <div class="ct">Delta path — live positions over time</div>
+      <div class="cs">skew-aware delta, sticky-strike · entry Δ ${fmtG(R.entryDelta,1)} · mean ± 1σ band · ±25 lines · min/max envelope</div>
+      <canvas id="dpath" height="220"></canvas>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Percentile</th><th>P5</th><th>P25</th><th>P50</th><th>P75</th><th>P95</th></tr></thead>
+        <tbody>
+          <tr><td>Managed P/L</td>
+            <td class="${cls(R.pctM.p5)}">${fmt$(R.pctM.p5)}</td>
+            <td class="${cls(R.pctM.p25)}">${fmt$(R.pctM.p25)}</td>
+            <td class="${cls(R.pctM.p50)}">${fmt$(R.pctM.p50)}</td>
+            <td class="${cls(R.pctM.p75)}">${fmt$(R.pctM.p75)}</td>
+            <td class="${cls(R.pctM.p95)}">${fmt$(R.pctM.p95)}</td></tr>
+          <tr><td>% of equity</td>
+            <td class="${cls(R.pctM.p5)}">${(R.pctM.p5/ACCT*100).toFixed(1)}%</td>
+            <td class="${cls(R.pctM.p25)}">${(R.pctM.p25/ACCT*100).toFixed(1)}%</td>
+            <td class="${cls(R.pctM.p50)}">${(R.pctM.p50/ACCT*100).toFixed(1)}%</td>
+            <td class="${cls(R.pctM.p75)}">${(R.pctM.p75/ACCT*100).toFixed(1)}%</td>
+            <td class="${cls(R.pctM.p95)}">${(R.pctM.p95/ACCT*100).toFixed(1)}%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+  $('results').innerHTML=html;
+  drawHist(R.sortedM, R.target, R.stop);
+  drawDeltaPath(R.env, R.dteAxis);
+}
+
+function drawHist(data, target, stop){
+  const cv=$('hist');const dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth,H=220;cv.width=W*dpr;cv.height=H*dpr;
+  const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const lo=data[Math.floor(data.length*0.01)],hi=data[Math.floor(data.length*0.99)];
+  const min=Math.min(lo,stop*1.1),max=Math.max(hi,target*1.2);
+  const bins=48,counts=new Array(bins).fill(0);
+  for(const x of data){if(x<min||x>max)continue;let b=Math.floor((x-min)/(max-min)*bins);if(b>=bins)b=bins-1;if(b<0)b=0;counts[b]++}
+  const cmax=Math.max(...counts);
+  const padB=24,padT=8;
+  const x0v=(0-min)/(max-min)*W; // zero line
+  // zero line
+  ctx.strokeStyle='#2a3744';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(x0v,padT);ctx.lineTo(x0v,H-padB);ctx.stroke();ctx.setLineDash([]);
+  // bars
+  const bw=W/bins;
+  for(let i=0;i<bins;i++){
+    const bx=i*bw;const binMid=min+(i+0.5)/bins*(max-min);
+    const h=(counts[i]/cmax)*(H-padB-padT);
+    ctx.fillStyle= binMid<0? '#e0604c' : '#4cc3a5';
+    ctx.globalAlpha= binMid<0?0.82:0.9;
+    ctx.fillRect(bx+0.5,H-padB-h,bw-1,h);
+  }
+  ctx.globalAlpha=1;
+  // target & stop markers
+  function vline(val,col,lab){const x=(val-min)/(max-min)*W;if(x<0||x>W)return;
+    ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,H-padB);ctx.stroke();
+    ctx.fillStyle=col;ctx.font='9px JetBrains Mono, monospace';ctx.fillText(lab,Math.min(x+4,W-46),padT+10);}
+  vline(target,'#4cc3a5','+50%');
+  vline(stop,'#e0604c','−100%');
+  // axis labels
+  ctx.fillStyle='#536170';ctx.font='9px JetBrains Mono, monospace';
+  ctx.fillText('$'+Math.round(min),2,H-8);
+  ctx.textAlign='right';ctx.fillText('$'+Math.round(max),W-2,H-8);
+  ctx.textAlign='center';ctx.fillText('$0',x0v,H-8);
+  ctx.textAlign='left';
+}
+
+function drawDeltaPath(env, dteMax){
+  const cv=$('dpath');if(!cv)return;const dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth,H=220;cv.width=W*dpr;cv.height=H*dpr;
+  const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
+  const padL=42,padR=12,padT=12,padB=24;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  if(!env||env.length<2){ctx.fillStyle='#536170';ctx.font='10px JetBrains Mono, monospace';ctx.fillText('insufficient live paths to plot',padL,H/2);return}
+
+  // x: days from entry (dteMax at left=entry → 0 at right=expiry). We plot elapsed time.
+  const xMax=env[env.length-1].day;
+  // y range: cover min/max envelope and ±25, with headroom
+  let yLo=Math.min(-25,...env.map(e=>e.min)), yHi=Math.max(25,...env.map(e=>e.max));
+  const pad=(yHi-yLo)*0.08; yLo-=pad; yHi+=pad;
+  const X=d=>padL+(d/xMax)*plotW;
+  const Y=v=>padT+(1-(v-yLo)/(yHi-yLo))*plotH;
+
+  // zero line
+  ctx.strokeStyle='#1e2933';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(padL,Y(0));ctx.lineTo(W-padR,Y(0));ctx.stroke();
+
+  // ±25 intervention lines
+  ctx.strokeStyle='#e0604c';ctx.setLineDash([4,3]);ctx.lineWidth=1;
+  [25,-25].forEach(v=>{if(v>yLo&&v<yHi){ctx.beginPath();ctx.moveTo(padL,Y(v));ctx.lineTo(W-padR,Y(v));ctx.stroke();}});
+  ctx.setLineDash([]);
+  ctx.fillStyle='#e0604c';ctx.font='9px JetBrains Mono, monospace';
+  if(25<yHi)ctx.fillText('+25',padL+2,Y(25)-3);
+  if(-25>yLo)ctx.fillText('−25',padL+2,Y(-25)+11);
+
+  // min/max envelope (faint fill)
+  ctx.beginPath();
+  env.forEach((e,i)=>{const x=X(e.day),y=Y(e.max);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+  for(let i=env.length-1;i>=0;i--){ctx.lineTo(X(env[i].day),Y(env[i].min))}
+  ctx.closePath();ctx.fillStyle='rgba(76,195,165,0.06)';ctx.fill();
+
+  // ±1σ band
+  ctx.beginPath();
+  env.forEach((e,i)=>{const x=X(e.day),y=Y(e.mean+e.sd);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+  for(let i=env.length-1;i>=0;i--){ctx.lineTo(X(env[i].day),Y(env[i].mean-env[i].sd))}
+  ctx.closePath();ctx.fillStyle='rgba(76,195,165,0.18)';ctx.fill();
+
+  // mean line
+  ctx.beginPath();ctx.strokeStyle='#4cc3a5';ctx.lineWidth=2;
+  env.forEach((e,i)=>{const x=X(e.day),y=Y(e.mean);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+  ctx.stroke();
+
+  // 21 DTE marker (mandatory action point)
+  const d21=dteMax-21;
+  if(d21>0&&d21<xMax){const x=X(d21);ctx.strokeStyle='#e0a04c';ctx.setLineDash([2,2]);ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,padT);ctx.lineTo(x,H-padB);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#e0a04c';ctx.fillText('21 DTE',x+3,padT+9);}
+
+  // axes
+  ctx.fillStyle='#536170';ctx.font='9px JetBrains Mono, monospace';
+  ctx.textAlign='right';
+  ctx.fillText(Math.round(yHi),padL-5,Y(yHi)+8);
+  ctx.fillText('0',padL-5,Y(0)+3);
+  ctx.fillText(Math.round(yLo),padL-5,Y(yLo));
+  ctx.textAlign='left';ctx.fillText('entry',padL,H-8);
+  ctx.textAlign='right';ctx.fillText('expiry',W-padR,H-8);
+  ctx.textAlign='left';
+}
+
+/* ── PWA: register an inline service worker so the app works offline ──
+   The SW is built from a Blob (keeps everything in this single file).
+   It caches this page on first load and serves it when offline. */
+if('serviceWorker' in navigator){
+  const swCode=`
+    const C='svc-mc-v1';
+    self.addEventListener('install',e=>{self.skipWaiting();});
+    self.addEventListener('activate',e=>{e.waitUntil(clients.claim());});
+    self.addEventListener('fetch',e=>{
+      if(e.request.method!=='GET')return;
+      e.respondWith(
+        caches.open(C).then(cache=>
+          cache.match(e.request).then(hit=>{
+            const net=fetch(e.request).then(res=>{
+              if(res&&res.status===200&&res.type==='basic'){cache.put(e.request,res.clone());}
+              return res;
+            }).catch(()=>hit);
+            return hit||net;
+          })
+        )
+      );
+    });
+  `;
+  try{
+    const blob=new Blob([swCode],{type:'text/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+  }catch(e){/* offline support unavailable; app still runs */}
+}
+</script>
+</body>
+</html>
